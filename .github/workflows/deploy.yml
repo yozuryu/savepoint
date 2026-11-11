@@ -17,6 +17,8 @@ permissions:
 
 jobs:
   deploy:
+    # Not in the template itself (no Pages site there). Copies made from it run normally
+    if: github.repository != 'yozuryu/savepoint-template'
     runs-on: ubuntu-latest
     concurrency:
       group: pages
