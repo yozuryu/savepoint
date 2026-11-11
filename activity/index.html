@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="manifest" href="../manifest.json" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Savepoint · Activity</title>
+    <link rel="icon" href="../assets/favicon.ico" sizes="48x48">
+    <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+    <link rel="apple-touch-icon" href="../assets/icon-192.png">
+    <link rel="stylesheet" href="../assets/motion.css">
+    <link rel="stylesheet" href="../assets/ui.css">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        html, body { background-color: #171a21; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { overflow-x: clip; }
+
+        @keyframes shimmer {
+            0%   { background-position: -800px 0; }
+            100% { background-position:  800px 0; }
+        }
+        .shimmer {
+            background: linear-gradient(90deg, #1b2838 25%, #2a3f52 50%, #1b2838 75%);
+            background-size: 800px 100%;
+            animation: shimmer 1.6s infinite linear;
+            border-radius: 2px;
+        }
+
+        /* Playtime day: per game, a 24-hour track under the title */
+        .pday { border-left-width: 1px; }
+        .paxis, .prow { display: grid; grid-template-columns: 32px minmax(0, 1fr) 62px; column-gap: 10px; }
+        .paxis { padding: 6px 12px 0 10px; }
+        .paxis > div { position: relative; height: 11px; }
+        .paxis i { position: absolute; top: 0; transform: translateX(-50%); font-style: normal; font-size: 9px; line-height: 11px; color: #3d5060; font-variant-numeric: tabular-nums; }
+        .paxis i:first-child { transform: none; }
+        .paxis i:last-child { transform: translateX(-100%); }
+        .prow { align-items: center; padding: 8px 12px 9px 10px; text-decoration: none; transition: background-color 150ms; }
+        .prow + .prow { border-top: 1px solid #1f2d3b; }
+        .prow:hover { background: #202d39; }
+        .prow > img, .prow > .trow-ph { width: 32px; height: 32px; }
+        .prow-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+        .ptrack { position: relative; height: 8px; border-radius: 2px; background:
+                  linear-gradient(90deg, transparent calc(25% - 0.5px), #22344a calc(25% - 0.5px), #22344a calc(25% + 0.5px), transparent calc(25% + 0.5px),
+                                         transparent calc(50% - 0.5px), #22344a calc(50% - 0.5px), #22344a calc(50% + 0.5px), transparent calc(50% + 0.5px),
+                                         transparent calc(75% - 0.5px), #22344a calc(75% - 0.5px), #22344a calc(75% + 0.5px), transparent calc(75% + 0.5px)), #131c26; }
+        .ptrack i { position: absolute; top: 0; bottom: 0; min-width: 2px; border-radius: 1px; }
+        .ptrack i.approx { opacity: 0.55; background-image: repeating-linear-gradient(135deg, transparent 0 2px, rgba(0,0,0,0.35) 2px 4px) !important; }
+        .prow-end { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+        .prow-end b { font-size: 12.5px; font-weight: 600; color: #c6d4df; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    </style>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "react": "https://esm.sh/react@18.2.0",
+            "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+            "lucide-react": "https://esm.sh/lucide-react@0.263.1"
+        }
+    }
+    </script>
+
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-[#171a21]">
+    <div id="root"></div>
+    <script type="text/babel" data-type="module" src="./app.js"></script>
+    <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('../sw.js', { scope: '../' });</script>
+    <script src="../assets/mobile-nav.js"></script>
+    <script src="../assets/art-fallback.js"></script>
+</body>
+</html>

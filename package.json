@@ -1,0 +1,35 @@
+{
+  "name": "savepoint",
+  "version": "1.0.0",
+  "description": "Self-hosted gaming stats hub for RetroAchievements, Steam and Xbox: a static site fed by scheduled GitHub Actions pipelines",
+  "license": "MIT",
+  "author": "",
+  "type": "commonjs",
+  "scripts": {
+    "start": "npx serve .",
+    "ra-fetch": "node scripts/ra-pipeline.js",
+    "ra-fetch:debug": "node scripts/ra-pipeline.js --debug",
+    "ra-fetch:full": "node scripts/ra-pipeline.js --refresh-games",
+    "ra-fetch:watchlist": "node scripts/ra-pipeline.js --watchlist-only",
+    "steam-fetch": "node scripts/steam-pipeline.js",
+    "steam-fetch:debug": "node scripts/steam-pipeline.js --debug",
+    "steam-fetch:unlocked": "node scripts/steam-pipeline.js --refresh-unlocked-games",
+    "steam-fetch:full": "node scripts/steam-pipeline.js --refresh-games",
+    "xbox-fetch": "node scripts/xbox-pipeline.js",
+    "xbox-fetch:debug": "node scripts/xbox-pipeline.js --debug",
+    "xbox-fetch:full": "node scripts/xbox-pipeline.js --refresh-games",
+    "assets": "node scripts/download-assets.js",
+    "admin": "node scripts/admin-server.js",
+    "data:pull": "node scripts/data-pull.js",
+    "build:series": "node scripts/build-series.js",
+    "build:fallback-art": "node scripts/build-fallback-art.js"
+  },
+  "dependencies": {
+    "@retroachievements/api": "^2.10.0",
+    "dotenv": "^17.3.1"
+  },
+  "devDependencies": {
+    "sharp": "^0.35.5"
+  },
+  "private": true
+}

@@ -1,0 +1,219 @@
+name: Fetch Data
+
+# Runs on the schedule below. GitHub often starts scheduled runs late (sometimes by hours), so for
+# fresher data an external cron (cron-job.org, see the README) can call the workflow_dispatch API:
+# `incremental` every 30 min and `midnight` once a day.
+#
+# The three pipelines run one after another in one job. A platform that fails doesn't
+# stop the others (each pipeline exits before writing when it fails, so its previous
+# files stay); the job is marked failed at the end so GitHub still sends the email.
+#
+# Pipeline output lives on the `data` branch, not main (paths in scripts/data-paths.json):
+# each run restores it into data/, runs the pipelines, and commits only to `data`. The
+# midnight run squashes `data` into a single commit, so the branch holds at most a day of
+# history. A run that changed data then deploys the site (deploy.yml).
+run-name: >-
+  ${{ github.event_name == 'schedule' && 'Data — fallback incremental' ||
+      format('Data — {0} ({1})', inputs.mode, inputs.platforms) }}
+
+on:
+  schedule:
+    - cron: '17 * * * *'   # incremental every hour (GitHub may run it late)
+    - cron: '5 0 * * *'    # midnight: refreshes rarity, ranks and the slower data
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'incremental = only writes on activity · midnight = RA full, Steam unlock, Xbox full refresh · full-refresh = every game on every platform · watchlist-only = RA want-to-play list'
+        type: choice
+        default: incremental
+        options:
+          - incremental
+          - midnight
+          - full-refresh
+          - watchlist-only
+      platforms:
+        description: 'Platforms to run'
+        type: choice
+        default: all
+        options:
+          - all
+          - ra
+          - steam
+          - xbox
+
+concurrency:
+  group: data-pipeline
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  MODE: ${{ inputs.mode || (github.event.schedule == '5 0 * * *' && 'midnight') || 'incremental' }}
+  PLATFORMS: ${{ inputs.platforms || 'all' }}
+  # Which platforms the scheduled runs (platforms = all) sync. Set one to 'false' to pause it;
+  # a manual run with that platform picked still syncs it. A platform without its secrets is
+  # always skipped, so you only need to touch these to pause a platform you have set up.
+  RA_ENABLED: 'true'
+  STEAM_ENABLED: 'true'
+  XBOX_ENABLED: 'true'
+  HAS_RA: ${{ secrets.RA_USERNAME != '' && secrets.RA_API_KEY != '' }}
+  HAS_STEAM: ${{ secrets.STEAM_API_KEY != '' && secrets.STEAM_USER_ID != '' }}
+  HAS_XBOX: ${{ secrets.XBOX_API_KEY != '' }}
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    outputs:
+      deploy: ${{ steps.commit.outputs.deploy }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # The first run creates the data branch: an empty commit with no history of its own
+      - name: Create data branch (first run)
+        run: |
+          if ! git ls-remote --exit-code --heads origin data >/dev/null; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            empty="$(git commit-tree "$(git hash-object -t tree /dev/null)" -m "chore: start the data branch")"
+            git push origin "$empty:refs/heads/data"
+          fi
+
+      - name: Checkout data branch
+        uses: actions/checkout@v4
+        with:
+          ref: data
+          path: _data
+
+      - name: Check setup
+        run: |
+          [ "$HAS_RA" = true ]    || echo "::notice::RetroAchievements skipped: add the RA_USERNAME and RA_API_KEY secrets to sync it"
+          [ "$HAS_STEAM" = true ] || echo "::notice::Steam skipped: add the STEAM_API_KEY and STEAM_USER_ID secrets to sync it"
+          [ "$HAS_XBOX" = true ]  || echo "::notice::Xbox skipped: add the XBOX_API_KEY secret to sync it"
+
+      # The pipelines read their previous output (caches, playtime baseline, history) from data/
+      - name: Restore data
+        run: |
+          for p in $(node -p "require('./scripts/data-paths.json').paths.join(' ')"); do
+            rm -rf "$p"
+            if [ -e "_data/$p" ]; then mkdir -p "$(dirname "$p")"; cp -R "_data/$p" "$p"; fi
+          done
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: RetroAchievements
+        id: ra
+        if: env.HAS_RA == 'true' && (env.PLATFORMS == 'ra' || (env.PLATFORMS == 'all' && env.RA_ENABLED == 'true'))
+        continue-on-error: true
+        env:
+          RA_USERNAME: ${{ secrets.RA_USERNAME }}
+          RA_API_KEY: ${{ secrets.RA_API_KEY }}
+        run: |
+          case "$MODE" in
+            midnight|full-refresh) npm run ra-fetch:full ;;
+            watchlist-only)        npm run ra-fetch:watchlist ;;
+            *)                     npm run ra-fetch ;;
+          esac
+
+      - name: Steam
+        id: steam
+        if: env.HAS_STEAM == 'true' && (env.PLATFORMS == 'steam' || (env.PLATFORMS == 'all' && env.STEAM_ENABLED == 'true')) && env.MODE != 'watchlist-only'
+        continue-on-error: true
+        env:
+          STEAM_API_KEY: ${{ secrets.STEAM_API_KEY }}
+          STEAM_USER_ID: ${{ secrets.STEAM_USER_ID }}
+        run: |
+          case "$MODE" in
+            midnight)     npm run steam-fetch:unlocked ;;
+            full-refresh) npm run steam-fetch:full ;;
+            *)            npm run steam-fetch ;;
+          esac
+
+      - name: Xbox
+        id: xbox
+        if: env.HAS_XBOX == 'true' && (env.PLATFORMS == 'xbox' || (env.PLATFORMS == 'all' && env.XBOX_ENABLED == 'true')) && env.MODE != 'watchlist-only'
+        continue-on-error: true
+        env:
+          XBOX_API_KEY: ${{ secrets.XBOX_API_KEY }}
+          XBOX_XUID: ${{ secrets.XBOX_XUID }}
+        run: |
+          case "$MODE" in
+            midnight|full-refresh) npm run xbox-fetch:full ;;
+            *)                     npm run xbox-fetch ;;
+          esac
+
+      - name: Commit updated data
+        id: commit
+        if: ${{ !cancelled() }}
+        run: |
+          # Copy the generated paths back onto the data branch checkout (removals included)
+          for p in $(node -p "require('./scripts/data-paths.json').paths.join(' ')"); do
+            rm -rf "_data/$p"
+            if [ -e "$p" ]; then mkdir -p "_data/$(dirname "$p")"; cp -R "$p" "_data/$p"; fi
+          done
+          cd _data
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A data
+          changed=""
+          for p in ra steam xbox; do
+            git diff --staged --quiet -- "data/$p/" || changed="$changed${changed:+, }$p"
+          done
+          case "$MODE" in
+            midnight)       MSG="chore: midnight refresh data" ;;
+            full-refresh)   MSG="chore: full refresh data" ;;
+            watchlist-only) MSG="chore: update ra watchlist" ;;
+            *)              MSG="chore: update data" ;;
+          esac
+          STAMP="$(date -u '+%Y-%m-%d %H:%M UTC')"
+          tip="$(git rev-parse HEAD)"
+
+          if [ "$MODE" = "midnight" ]; then
+            # Daily squash: the current tree as one parentless commit, replacing the day's commits
+            tree="$(git write-tree)"
+            # A shallow clone still has the commit object, whose `parent` lines say if there's history
+            if [ "$tree" = "$(git rev-parse 'HEAD^{tree}')" ] && ! git cat-file -p HEAD | grep -q '^parent '; then
+              echo "No changes, data branch already a single commit"
+              exit 0
+            fi
+            squashed="$(git commit-tree "$tree" -m "chore: data snapshot ${changed:+($changed) }$STAMP")"
+            git push --force-with-lease="data:$tip" origin "$squashed:refs/heads/data"
+            [ "$tree" != "$(git rev-parse 'HEAD^{tree}')" ] && echo "deploy=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "$MSG ($changed) $STAMP"
+          # Only this workflow writes to data, one run at a time (concurrency group), so no rebase
+          git push origin HEAD:refs/heads/data
+          echo "deploy=true" >> "$GITHUB_OUTPUT"
+
+      - name: Report failed platforms
+        if: steps.ra.outcome == 'failure' || steps.steam.outcome == 'failure' || steps.xbox.outcome == 'failure'
+        run: |
+          echo "::error::Failed: RA=${{ steps.ra.outcome }} Steam=${{ steps.steam.outcome }} Xbox=${{ steps.xbox.outcome }}"
+          exit 1
+
+  # Publish the new data: the site is main + the data branch (deploy.yml)
+  deploy:
+    needs: fetch
+    if: ${{ !cancelled() && needs.fetch.outputs.deploy == 'true' }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/deploy.yml

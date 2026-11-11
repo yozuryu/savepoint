@@ -1,0 +1,42 @@
+{
+  "username": "Player One",
+  "motto": "Every save point tells a story",
+  "avatar": "",
+  "tags": {
+    "genre": [
+      "RPG",
+      "Platformer"
+    ],
+    "style": [
+      "Pixel Art",
+      "Story Driven"
+    ]
+  },
+  "platforms": {
+    "retroachievements": {
+      "visible": true
+    },
+    "steam": {
+      "visible": true
+    },
+    "xbox": {
+      "visible": true
+    }
+  },
+  "siteUrl": "",
+  "playing": {
+    "visible": true
+  },
+  "series": {
+    "visible": true
+  },
+  "activity": {
+    "visible": true
+  },
+  "completions": {
+    "visible": true
+  },
+  "analytics": {
+    "visible": true
+  }
+}
