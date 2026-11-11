@@ -253,6 +253,7 @@ Optional keys for the admin, all in `.env`:
 - **Custom domain**: **Settings → Pages → Custom domain**. Everything works under any address.
 - **Colours and layout**: the site is plain files: pages in their folders (`profile/ra/`, `activity/`, …), shared styles in `assets/ui.css`. Edit and push; there is no build step.
 - **Changelog**: `changelog.md` is shown at `/changelog/`. Keep your own notes there, or ignore it.
+- **Posters**: the images in this README are made by `npm run posters` from screenshots of your own site (after `npm run data:pull`, and `npx playwright install chromium` once). Run it again after changing the look. `--header-art <image url>` puts one picture behind the hub and RA headers instead of your latest game; `--help`-style notes are at the top of `scripts/posters.js`.
 
 ## Getting updates
 

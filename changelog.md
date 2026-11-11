@@ -10,3 +10,4 @@ Your Savepoint hub, ready to fill with your own games.
 - new: **Admin panel** for series, art, config and data runs
   Runs on your computer with `npm run admin`; never deployed.
 - new: **Top bar** starts with the Savepoint wordmark, then your name
+- new: **Posters** for your README from your own site: `npm run posters`
