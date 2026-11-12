@@ -51,9 +51,9 @@ async function capture() {
     const ra = (() => { try { return JSON.parse(fs.readFileSync(path.join(ROOT, 'data/ra/profile.json'), 'utf8')); } catch { return null; } })();
     const game = arg('game', ra?.recentlyPlayedGames?.[0]?.gameId ?? ra?.mostRecentGame?.gameId);
     const phone = [['hub', ''], ['ra', 'profile/ra/'], ['steam', 'profile/steam/'], ['xbox', 'profile/xbox/'], ['activity', 'activity/'],
-        ['playing', 'activity/?view=playing'], ['analytics', 'analytics/'], ['completions', 'completions/'], ['series', 'series/'],
+        ['playing', 'activity/?view=playing'], ['analytics', 'analytics/?tab=time&period=3m'], ['completions', 'completions/'], ['series', 'series/'],
         ...(game ? [['sheet', `profile/ra/?game=${game}`]] : [])];
-    const desktop = [['d-hub', ''], ['d-ra', 'profile/ra/'], ['d-activity', 'activity/'], ['d-analytics', 'analytics/'], ['d-completions', 'completions/'], ['d-series', 'series/']];
+    const desktop = [['d-hub', ''], ['d-ra', 'profile/ra/'], ['d-activity', 'activity/'], ['d-analytics', 'analytics/?period=3m'], ['d-completions', 'completions/'], ['d-series', 'series/']];
 
     const server = await serve();
     const base = `http://127.0.0.1:${server.address().port}/`;
@@ -141,7 +141,7 @@ p.lede{font-size:23px;line-height:1.5;color:#9fb0bf;max-width:32ch}
     ${head('Activity', 'See what you played, <span class="grad">and when</span>', 'Play sessions logged from your playtime every hour. The games in rotation stay in view, next to a year-long heatmap of every unlock.')}
     ${stage(620, browser('d-activity', '/activity', 0, 20, 1000, 560) + phone('playing', 1040, -40, 255, 1) + phone('activity', 1185, 40, 255, 2))}</div>`,
         analytics: `<div class="poster" style="height:960px">${G(560, 320, 900, 520, 'rgba(229,177,67,.18)')}${G(0, 480, 640, 420, 'rgba(102,192,244,.24)')}
-    ${head('Analytics', 'Months of play, <span class="grad">in charts</span>', 'Hours, unlocks and sessions for any period, compared with the one before: your peak hours, favourite day, top games and rarest unlocks.')}
+    ${head('Analytics', 'Months of play, <span class="grad">in charts</span>', 'Hours, unlocks and sessions for any period, compared with the one before. Your daily rhythm, peak hours and top game.')}
     ${stage(620, phone('analytics', 0, -30, 260, 2) + browser('d-analytics', '/analytics', 300, 20, 1140, 560))}</div>`,
         collection: `<div class="poster" style="height:980px">${G(260, 320, 820, 520, 'rgba(229,177,67,.24)')}${G(1000, 420, 600, 500, 'rgba(102,192,244,.22)')}
     ${head('Completions and series', 'Your collection, <span class="grad">organised</span>', 'Mastered, perfect and beaten games on one timeline. Series across platforms, with sub-series and progress for each.')}
