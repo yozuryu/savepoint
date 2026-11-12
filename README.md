@@ -260,7 +260,7 @@ Optional keys for the admin, all in `.env`:
 To pull improvements from this template into your copy later:
 
 ```sh
-git remote add template https://github.com/yozuryu/savepoint-template.git
+git remote add template https://github.com/yozuryu/savepoint.git
 git fetch template
 git merge template/main --allow-unrelated-histories   # first time only; later just: git merge template/main
 ```

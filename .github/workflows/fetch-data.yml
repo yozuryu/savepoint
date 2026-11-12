@@ -64,7 +64,7 @@ env:
 jobs:
   fetch:
     # Not in the template itself (it has no keys and no site). Copies made from it run normally
-    if: github.repository != 'yozuryu/savepoint-template'
+    if: github.repository != 'yozuryu/savepoint'
     runs-on: ubuntu-latest
     timeout-minutes: 90
     outputs:
