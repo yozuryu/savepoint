@@ -257,15 +257,20 @@ Optional keys for the admin, all in `.env`:
 
 ## Getting updates
 
-To pull improvements from this template into your copy later:
+The **Template updates** workflow checks this template every Monday (or when you run it from the Actions tab) and opens a pull request with whatever is new. Merge it and your site updates. Your config, series, art picks and avatar keep your version (`.gitattributes`).
+
+It needs two things:
+
+- **Settings → Actions → General → Allow GitHub Actions to create and approve pull requests** turned on.
+- One first merge by hand, because a copy made from a template doesn't share its history yet:
 
 ```sh
 git remote add template https://github.com/yozuryu/savepoint.git
 git fetch template
-git merge template/main --allow-unrelated-histories   # first time only; later just: git merge template/main
+git merge template/main --allow-unrelated-histories
 ```
 
-Keep your own `data/hub/config.json` and series files when Git reports conflicts in them.
+Every file you changed shows as a conflict this one time: keep your own `data/hub/config.json` and series files, take the template's version of the rest. After that the workflow merges on its own and only opens an issue when a file changed on both sides. GitHub's own token can't push changes to workflow files, so when an update touches `.github/workflows` the workflow asks for a `TEMPLATE_SYNC_TOKEN` secret (a personal access token with the repo and workflow scopes).
 
 ## Troubleshooting
 

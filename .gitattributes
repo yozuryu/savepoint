@@ -1,0 +1,11 @@
+# Template updates (.github/workflows/template-sync.yml): when one of these changed both in your
+# copy and in the template, your version is kept. They're yours: profile config, series, art picks.
+data/hub/config.json merge=ours
+data/hub/series.json merge=ours
+data/hub/idle-games.json merge=ours
+data/hub/farm-games.json merge=ours
+data/ra/series.json merge=ours
+data/steam/series.json merge=ours
+data/xbox/series.json merge=ours
+data/ra/art.json merge=ours
+assets/avatar.png merge=ours

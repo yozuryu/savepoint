@@ -1,0 +1,85 @@
+# Template updates: merges new commits from the Savepoint template (yozuryu/savepoint) into this
+# copy and opens a pull request for you to merge. Runs every Monday, or from the Actions tab.
+#
+# - Your own files (config, series, art picks, avatar) keep your version when both sides changed
+#   them: see .gitattributes.
+# - When the merge conflicts somewhere else, it opens an issue listing the files instead.
+# - Needs "Allow GitHub Actions to create and approve pull requests" (Settings → Actions → General).
+# - GitHub's own token can't push changes to workflow files. If an update touches .github/workflows,
+#   add a TEMPLATE_SYNC_TOKEN secret (a personal access token with the repo and workflow scopes).
+name: Template updates
+
+on:
+  schedule:
+    - cron: '20 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: template-sync
+
+jobs:
+  sync:
+    if: github.repository != 'yozuryu/savepoint'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.TEMPLATE_SYNC_TOKEN || github.token }}
+      TEMPLATE: https://github.com/yozuryu/savepoint.git
+      BRANCH: template-updates
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.TEMPLATE_SYNC_TOKEN || github.token }}
+
+      - name: Merge the template
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config merge.ours.driver true
+          git remote add template "$TEMPLATE"
+          git fetch --no-tags template main
+
+          if git merge-base --is-ancestor template/main HEAD; then
+            echo "Already up to date with the template."
+            exit 0
+          fi
+
+          # Reports a problem as one open issue (updated, not duplicated)
+          report() {
+            title="Savepoint update needs a hand"
+            num=$(gh issue list --state open --search "in:title \"$title\"" --json number -q '.[0].number')
+            if [ -n "$num" ]; then gh issue comment "$num" --body "$1"; else gh issue create --title "$title" --body "$1"; fi
+          }
+
+          git switch -C "$BRANCH"
+          if ! git merge template/main --no-edit -m "chore: updates from the Savepoint template"; then
+            files=$(git diff --name-only --diff-filter=U | sed 's/^/- `/; s/$/`/')
+            git merge --abort || true
+            if [ -z "$files" ]; then
+              report "The template's history isn't connected to this repository yet. Run the first-time merge from the README's **Getting updates** section once; after that this workflow keeps you up to date."
+            else
+              report "These files changed both here and in the template, so the update couldn't be merged automatically:
+
+          $files
+
+          Merge it on your computer (\`git fetch template && git merge template/main\`, see the README's **Getting updates**), or edit the files so they match the template and run **Template updates** again."
+            fi
+            exit 1
+          fi
+
+          if ! git push --force origin "$BRANCH"; then
+            report "The update changes workflow files, which GitHub's own token can't push. Add a \`TEMPLATE_SYNC_TOKEN\` secret (a personal access token with the repo and workflow scopes) and run **Template updates** again."
+            exit 1
+          fi
+
+          if [ -z "$(gh pr list --head "$BRANCH" --state open --json number -q '.[0].number')" ]; then
+            gh pr create --base "${{ github.event.repository.default_branch }}" --head "$BRANCH" \
+              --title "Updates from Savepoint" \
+              --body "New changes from the Savepoint template. What changed is in \`changelog.md\`. Merge this pull request to update your site; your config, series and art picks are kept." \
+              || report "The update is ready on the \`$BRANCH\` branch, but the workflow can't open pull requests. Turn on **Allow GitHub Actions to create and approve pull requests** (Settings → Actions → General), or open the pull request from that branch yourself."
+          fi
